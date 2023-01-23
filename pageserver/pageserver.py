@@ -13,15 +13,18 @@
   program is run).
 """
 
-import config    # Configure from .ini files and command line
-import logging   # Better than print statements
+import config  # Configure from .ini files and command line
+import logging  # Better than print statements
+
 logging.basicConfig(format='%(levelname)s:%(message)s',
                     level=logging.INFO)
 log = logging.getLogger(__name__)
 # Logging level may be overridden by configuration 
 
-import socket    # Basic TCP/IP communication on the internet
-import _thread   # Response computation runs concurrently with main program
+import socket  # Basic TCP/IP communication on the internet
+import _thread  # Response computation runs concurrently with main program
+
+"""curl -X GET http//local"""
 
 
 def listen(portnum):
@@ -38,7 +41,7 @@ def listen(portnum):
     serversocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     # Bind to port and make accessible from anywhere that has our IP address
     serversocket.bind(('', portnum))
-    serversocket.listen(1)    # A real server would have multiple listeners
+    serversocket.listen(1)  # A real server would have multiple listeners
     return serversocket
 
 
@@ -88,11 +91,24 @@ def respond(sock):
     request = str(request, encoding='utf-8', errors='strict')
     log.info("--- Received request ----")
     log.info("Request was {}\n***\n".format(request))
-
+    options = get_options()
+    docroot = options.DOCROOT
     parts = request.split()
+
     if len(parts) > 1 and parts[0] == "GET":
-        transmit(STATUS_OK, sock)
-        transmit(CAT, sock)
+        if ".." in parts[1] or "~" in parts[1]:
+            transmit(STATUS_FORBIDDEN, sock)
+            transmit("Error 403: Your request contains forbidden characters"
+                     , sock)
+        else:
+            try:
+                f = open(f'{docroot}{parts[1]}', 'r')
+                transmit(STATUS_OK, sock)
+                transmit(f.read(), sock)
+            except:
+                transmit(STATUS_NOT_FOUND, sock)
+                transmit("Error 404: File not found", sock)
+
     else:
         log.info("Unhandled request: {}".format(request))
         transmit(STATUS_NOT_IMPLEMENTED, sock)
@@ -109,6 +125,7 @@ def transmit(msg, sock):
     while sent < len(msg):
         buff = bytes(msg[sent:], encoding="utf-8")
         sent += sock.send(buff)
+
 
 ###
 #
@@ -129,8 +146,8 @@ def get_options():
 
     if options.PORT <= 1000:
         log.warning(("Port {} selected. " +
-                         " Ports 0..1000 are reserved \n" +
-                         "by the operating system").format(options.port))
+                     " Ports 0..1000 are reserved \n" +
+                     "by the operating system").format(options.port))
 
     return options
 
