@@ -100,7 +100,7 @@ def respond(sock):
             transmit(STATUS_FORBIDDEN, sock)
             transmit("Error 403: Your request contains forbidden characters"
                      , sock)
-        else:
+        elif len(parts[1]) > 1:
             try:
                 f = open(f'{docroot}{parts[1]}', 'r')
                 transmit(STATUS_OK, sock)
@@ -108,6 +108,10 @@ def respond(sock):
             except:
                 transmit(STATUS_NOT_FOUND, sock)
                 transmit("Error 404: File not found", sock)
+        else:
+            transmit(STATUS_FORBIDDEN, sock)
+            transmit("Error 403: Empty Request", sock)
+
 
     else:
         log.info("Unhandled request: {}".format(request))
